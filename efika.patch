@@ -1,0 +1,1447 @@
+Index: linux/arch/arm/boot/dts/Makefile
+===================================================================
+--- linux.orig/arch/arm/boot/dts/Makefile
++++ linux/arch/arm/boot/dts/Makefile
+@@ -430,6 +430,7 @@ dtb-$(CONFIG_SOC_IMX51) += \
+ 	imx51-apf51dev.dtb \
+ 	imx51-babbage.dtb \
+ 	imx51-digi-connectcore-jsk.dtb \
++	imx51-genesi-efika-mx.dtb \
+ 	imx51-eukrea-mbimxsd51-baseboard.dtb \
+ 	imx51-ts4800.dtb \
+ 	imx51-zii-rdu1.dtb \
+Index: linux/arch/arm/boot/dts/imx51-genesi-efika-mx.dts
+===================================================================
+--- /dev/null
++++ linux/arch/arm/boot/dts/imx51-genesi-efika-mx.dts
+@@ -0,0 +1,733 @@
++/*
++ * Copyright 2012 Sascha Hauer, Pengutronix <s.hauer@pengutronix.de>
++ *
++ * The code contained herein is licensed under the GNU General Public
++ * License. You may obtain a copy of the GNU General Public License
++ * Version 2 or later at the following locations:
++ *
++ * http://www.opensource.org/licenses/gpl-license.html
++ * http://www.gnu.org/copyleft/gpl.html
++ */
++
++/dts-v1/;
++#include "imx51.dtsi"
++
++/ {
++	model = "Genesi Efika MX Smarttop 1.1";
++	compatible = "genesi,imx51-mx1.1", "genesi,imx51-mx", "fsl,imx51";
++
++	memory@90000000 {
++		device_type = "memory";
++		reg = <0x90000000 0x20000000>;
++	};
++
++	hdmi: connector {
++		compatible = "hdmi-connector";
++		label = "hdmi";
++
++		type = "a";
++
++		port {
++			hdmi_connector_in: endpoint {
++				remote-endpoint = <&bridge_out>;
++			};
++		};
++	};
++
++	display1: disp1 {
++		compatible = "fsl,imx-parallel-display";
++		#address-cells = <1>;
++		#size-cells = <0>;
++		interface-pix-fmt = "rgb24";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_ipu_disp1>;
++
++		port@0 {
++			reg = <0>;
++
++			display1_in: endpoint {
++				remote-endpoint = <&ipu_di0_disp1>;
++			};
++		};
++
++		port@1 {
++			reg = <1>;
++
++			display1_out: endpoint {
++				remote-endpoint = <&bridge_in>;
++			};
++		};
++	};
++
++	clk_usb: clk-usb {
++		compatible = "fixed-clock";
++		/*clocks = <&clk_osc_gate>;*/
++		#clock-cells = <0>;
++		clock-frequency = <24000000>;
++	};
++
++	clk_audio: clk-audio {
++		compatible = "fixed-clock";
++		#clock-cells = <0>;
++		clock-frequency = <12288000>;
++	};
++
++	clk_sgtl5000: clk-sgtl5000 {
++		compatible = "gpio-gate-clock";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_clk_sgtl5000>;
++		clocks = <&clk_audio>;
++		#clock-cells = <0>;
++		enable-gpios = <&gpio4 26 GPIO_ACTIVE_LOW>;
++	};
++
++	leds {
++		compatible = "gpio-leds";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_leds>;
++
++		blue {
++			label = "blue";
++			gpios = <&gpio3 13 0>;
++			linux,default-trigger = "mmc1";
++		};
++
++		green {
++			label = "green";
++			gpios = <&gpio3 14 0>;
++			linux,default-trigger = "default-on";
++		};
++
++		red {
++			label = "red";
++			gpios = <&gpio3 15 0>;
++			linux,default-trigger = "none";
++		};
++
++	};
++
++	gpio-keys {
++		compatible = "gpio-keys";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_keys>;
++
++		power {
++			label = "Power";
++			gpios = <&gpio2 31 0>;
++			linux,code = <116>; /* KEY_POWER */
++			gpio-key,wakeup;
++		};
++	};
++
++	/* rev 1.1 specific, newer versions are on gpio1 4 */
++	gpio-restart {
++		compatible = "gpio-restart";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_reset>;
++		gpios = <&gpio3 2 GPIO_ACTIVE_LOW>;
++		active-delay = <100>;
++		inactive-delay = <10>;
++		wait-delay = <100>;
++	};
++
++	regulators {
++		compatible = "simple-bus";
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		/* should be possibly converted to simple-audio-amplifier and sound card to simple-audio-card
++		   as done in arch/arm/boot/dts/imx51-zii-rdu1.dts */
++		audioamp_reg: regulator@1 {
++			pinctrl-names = "default";
++			pinctrl-0 = <&pinctrl_audioamp>;
++			reg = <1>;
++			compatible = "regulator-fixed";
++			regulator-name = "audioamp";
++			regulator-min-microvolt = <1800000>;
++			regulator-max-microvolt = <1800000>;
++			gpio = <&gpio2 17 GPIO_ACTIVE_HIGH>;
++			enable-active-high;
++			regulator-always-on;
++		};
++
++		hdmi_reg: regulator@3 {
++			reg = <3>;
++			compatible = "regulator-fixed";
++			pinctrl-names = "default";
++			pinctrl-0 = <&pinctrl_hdmi_en>;
++			regulator-name = "hdmi";
++			regulator-min-microvolt = <1800000>;
++			regulator-max-microvolt = <1800000>;
++			gpio = <&gpio3 4 GPIO_ACTIVE_LOW>;
++			regulator-always-on;
++		};
++
++		/* Check if it's really working as expected... */
++		reg_hub_reset: regulator@4 {
++			compatible = "regulator-fixed";
++			pinctrl-names = "default";
++			pinctrl-0 = <&pinctrl_hub_reset>;
++			reg = <4>;
++			regulator-name = "hub_reset";
++			regulator-min-microvolt = <5000000>;
++			regulator-max-microvolt = <5000000>;
++			gpio = <&gpio1 5 GPIO_ACTIVE_HIGH>;
++			enable-active-high;
++		};
++
++		vga: regulator@5 {
++			compatible = "regulator-fixed";
++			pinctrl-names = "default";
++			pinctrl-0 = <&pinctrl_vga_en>;
++			regulator-name = "vga";
++			regulator-min-microvolt = <1800000>;
++			regulator-max-microvolt = <1800000>;
++			gpio = <&gpio3 7 GPIO_ACTIVE_HIGH>;
++			enable-active-high;
++			regulator-always-on;
++			reg = <5>;
++		};
++
++	};
++
++        rfkill {
++                compatible = "simple-bus";
++                #address-cells = <1>;
++                #size-cells = <0>;
++
++                wlan-rfkill@0 {
++			reg = <0>;
++			pinctrl-names = "default";
++			pinctrl-0 = <&pinctrl_wlan>;
++                        compatible = "rfkill-gpio";
++                        label = "wlan";
++                        type = "wlan";
++                        reset-gpio = <&gpio2 10 GPIO_ACTIVE_LOW>;
++                        shutdown-gpio = <&gpio2 16 GPIO_ACTIVE_LOW>;
++                };
++	};
++
++	gpio_poweroff {
++		compatible = "gpio-poweroff";
++		gpios = <&gpio4 13 GPIO_ACTIVE_HIGH>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_poweroff>;
++	};
++
++        sound {
++                compatible = "fsl,imx51-efikamx-sgtl5000",
++                             "fsl,imx-audio-sgtl5000";
++                model = "imx51-efikamx-sgtl5000";
++                pinctrl-names = "default";
++                pinctrl-0 = <&pinctrl_hp_det>;
++                audio-cpu = <&ssi2>;
++                audio-codec = <&sgtl5000>;
++                audio-routing =
++			"MIC_IN", "Mic Jack",
++			"Mic Jack", "Mic Bias",
++                        "Headphone Jack", "HP_OUT",
++                        "Ext Spk", "LINE_OUT";
++                mux-int-port = <2>;
++                mux-ext-port = <3>;
++                hp-det-gpio = <&gpio3 8 GPIO_ACTIVE_HIGH>;
++        };
++
++	usbphy1: usbphy1 {
++		compatible = "usb-nop-xceiv";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_usbh1reg>;
++		reset-gpios = <&gpio2 9 GPIO_ACTIVE_LOW>;
++		clocks = <&clk_usb>;
++		clock-names = "main_clk";
++		#phy-cells = <0>;
++	};
++};
++
++&ssi2 {
++	status = "okay";
++};
++
++&iomuxc {
++	imx51-genesi-efika-mx {
++		pinctrl_audioamp: audioampgrp {
++			fsl,pins = <
++				MX51_PAD_EIM_A23__GPIO2_17	0x85	/* Audio amp enable, 1 = on */
++			>;
++		};
++
++		pinctrl_audmux: audmuxgrp {
++			fsl,pins = <
++				MX51_PAD_AUD3_BB_TXD__AUD3_TXD 0x80000000
++				MX51_PAD_AUD3_BB_RXD__AUD3_RXD 0x80000000
++				MX51_PAD_AUD3_BB_CK__AUD3_TXC 0x80000000
++				MX51_PAD_AUD3_BB_FS__AUD3_TXFS 0x80000000
++			>;
++		};
++
++		pinctrl_clk_sgtl5000: clksgtl5000grp {
++			fsl,pins = <
++				MX51_PAD_CSPI1_RDY__GPIO4_26	0x85	/* Audio clk enable */
++			>;
++		};
++
++		pinctrl_ecspi1: ecspi1grp {
++			fsl,pins = <
++				MX51_PAD_CSPI1_MISO__ECSPI1_MISO	0x185
++				MX51_PAD_CSPI1_MOSI__ECSPI1_MOSI	0x185
++				MX51_PAD_CSPI1_SCLK__ECSPI1_SCLK	0x185
++				MX51_PAD_CSPI1_SS0__GPIO4_24	    0x80000000 /* CS0 */
++				MX51_PAD_CSPI1_SS1__GPIO4_25	    0x80000000 /* CS1 */
++				MX51_PAD_GPIO1_6__GPIO1_6		0xe5 /* PMIC IRQ */
++			>;
++		};
++
++		pinctrl_esdhc1: esdhc1grp {
++			fsl,pins = <
++				MX51_PAD_SD1_CMD__SD1_CMD	       0x400020d5
++				MX51_PAD_SD1_CLK__SD1_CLK	       0x20d5
++				MX51_PAD_SD1_DATA0__SD1_DATA0	   0x20d5
++				MX51_PAD_SD1_DATA1__SD1_DATA1	   0x20d5
++				MX51_PAD_SD1_DATA2__SD1_DATA2	   0x20d5
++				MX51_PAD_SD1_DATA3__SD1_DATA3	   0x20d5
++				MX51_PAD_GPIO1_1__GPIO1_1		0xe5 /* WP */
++				MX51_PAD_GPIO1_0__GPIO1_0		0xe5 /* CD */
++			>;
++		};
++
++		pinctrl_esdhc2: esdhc2grp {
++			fsl,pins = <
++				MX51_PAD_SD2_CMD__SD2_CMD	       0x400020d5
++				MX51_PAD_SD2_CLK__SD2_CLK	       0x20d5
++				MX51_PAD_SD2_DATA0__SD2_DATA0	   0x20d5
++				MX51_PAD_SD2_DATA1__SD2_DATA1	   0x20d5
++				MX51_PAD_SD2_DATA2__SD2_DATA2	   0x20d5
++				MX51_PAD_SD2_DATA3__SD2_DATA3	   0x20d5
++				MX51_PAD_GPIO1_7__GPIO1_7	       0xe5 /* WP */
++				MX51_PAD_GPIO1_8__GPIO1_8	       0xe5 /* CD */
++			>;
++		};
++
++		pinctrl_hdmi: hdmigrp {
++			fsl,pins = <
++				MX51_PAD_DISPB2_SER_DIO__GPIO3_6	0x80000000	/* hdmi irq */
++				MX51_PAD_DISPB2_SER_DIN__GPIO3_5	0x80000000	/* display reset */
++			>;
++		};
++
++		pinctrl_hdmi_en: hdmiengrp {
++			fsl,pins = <
++				MX51_PAD_DI1_D1_CS__GPIO3_4		0x80000000	/* hdmi en - active low */
++			>;
++		};
++
++		pinctrl_hp_det: hpdetgrp {
++			fsl,pins = <
++				MX51_PAD_DISPB2_SER_RS__GPIO3_8	0x20	/* hp det */
++			>;
++		};
++
++		pinctrl_hub_reset: hubresetgrp {
++			fsl,pins = <
++				MX51_PAD_GPIO1_5__GPIO1_5	0x80000000 /* 0x85	*/ /* USB hub reset, 0 = reset */
++			>;
++		};
++
++		pinctrl_i2c2: i2c2grp {
++			fsl,pins = <
++				MX51_PAD_KEY_COL4__I2C2_SCL 0x400001ed
++				MX51_PAD_KEY_COL5__I2C2_SDA 0x400001ed
++			>;
++		};
++
++
++		pinctrl_ipu_disp1: ipudisp1grp {
++		       fsl,pins = <
++				MX51_PAD_DISP1_DAT0__DISP1_DAT0	 0x5
++				MX51_PAD_DISP1_DAT1__DISP1_DAT1	 0x5
++				MX51_PAD_DISP1_DAT2__DISP1_DAT2	 0x5
++				MX51_PAD_DISP1_DAT3__DISP1_DAT3	 0x5
++				MX51_PAD_DISP1_DAT4__DISP1_DAT4	 0x5
++				MX51_PAD_DISP1_DAT5__DISP1_DAT5	 0x5
++				MX51_PAD_DISP1_DAT6__DISP1_DAT6	 0x5
++				MX51_PAD_DISP1_DAT7__DISP1_DAT7	 0x5
++				MX51_PAD_DISP1_DAT8__DISP1_DAT8	 0x5
++				MX51_PAD_DISP1_DAT9__DISP1_DAT9	 0x5
++				MX51_PAD_DISP1_DAT10__DISP1_DAT10       0x5
++				MX51_PAD_DISP1_DAT11__DISP1_DAT11       0x5
++				MX51_PAD_DISP1_DAT12__DISP1_DAT12       0x5
++				MX51_PAD_DISP1_DAT13__DISP1_DAT13       0x5
++				MX51_PAD_DISP1_DAT14__DISP1_DAT14       0x5
++				MX51_PAD_DISP1_DAT15__DISP1_DAT15       0x5
++				MX51_PAD_DISP1_DAT16__DISP1_DAT16       0x5
++				MX51_PAD_DISP1_DAT17__DISP1_DAT17       0x5
++				MX51_PAD_DISP1_DAT18__DISP1_DAT18       0x5
++				MX51_PAD_DISP1_DAT19__DISP1_DAT19       0x5
++				MX51_PAD_DISP1_DAT20__DISP1_DAT20       0x5
++				MX51_PAD_DISP1_DAT21__DISP1_DAT21       0x5
++				MX51_PAD_DISP1_DAT22__DISP1_DAT22       0x5
++				MX51_PAD_DISP1_DAT23__DISP1_DAT23       0x5
++				MX51_PAD_DI1_PIN2__DI1_PIN2	     0x5
++				MX51_PAD_DI1_PIN3__DI1_PIN3	     0x5
++			>;
++		};
++
++		pinctrl_keys: keysgrp {
++			fsl,pins = <
++				MX51_PAD_EIM_DTACK__GPIO2_31	0xe5 /* Power btn */
++			>;
++		};
++
++		pinctrl_leds: ledsgrp {
++			fsl,pins = <
++				MX51_PAD_CSI1_D9__GPIO3_13	0x85
++				MX51_PAD_CSI1_VSYNC__GPIO3_14	0x85
++				MX51_PAD_CSI1_HSYNC__GPIO3_15	0x85
++			>;
++		};
++
++		pinctrl_pata: patagrp {
++			fsl,pins = <
++				MX51_PAD_NANDF_WE_B__PATA_DIOW		0x2004
++				MX51_PAD_NANDF_RE_B__PATA_DIOR		0x2004
++				MX51_PAD_NANDF_ALE__PATA_BUFFER_EN	0x2004
++				MX51_PAD_NANDF_CLE__PATA_RESET_B	0x2004
++				MX51_PAD_NANDF_WP_B__PATA_DMACK		0x2004
++				MX51_PAD_NANDF_RB0__PATA_DMARQ		0x2004
++				MX51_PAD_NANDF_RB1__PATA_IORDY		0x2004
++				MX51_PAD_GPIO_NAND__PATA_INTRQ		0x2004
++				MX51_PAD_NANDF_CS2__PATA_CS_0		0x2004
++				MX51_PAD_NANDF_CS3__PATA_CS_1		0x2004
++				MX51_PAD_NANDF_CS4__PATA_DA_0		0x2004
++				MX51_PAD_NANDF_CS5__PATA_DA_1		0x2004
++				MX51_PAD_NANDF_CS6__PATA_DA_2		0x2004
++				MX51_PAD_NANDF_D15__PATA_DATA15		0x2004
++				MX51_PAD_NANDF_D14__PATA_DATA14		0x2004
++				MX51_PAD_NANDF_D13__PATA_DATA13		0x2004
++				MX51_PAD_NANDF_D12__PATA_DATA12		0x2004
++				MX51_PAD_NANDF_D11__PATA_DATA11		0x2004
++				MX51_PAD_NANDF_D10__PATA_DATA10		0x2004
++				MX51_PAD_NANDF_D9__PATA_DATA9		0x2004
++				MX51_PAD_NANDF_D8__PATA_DATA8		0x2004
++				MX51_PAD_NANDF_D7__PATA_DATA7		0x2004
++				MX51_PAD_NANDF_D6__PATA_DATA6		0x2004
++				MX51_PAD_NANDF_D5__PATA_DATA5		0x2004
++				MX51_PAD_NANDF_D4__PATA_DATA4		0x2004
++				MX51_PAD_NANDF_D3__PATA_DATA3		0x2004
++				MX51_PAD_NANDF_D2__PATA_DATA2		0x2004
++				MX51_PAD_NANDF_D1__PATA_DATA1		0x2004
++				MX51_PAD_NANDF_D0__PATA_DATA0		0x2004
++			>;
++		};
++
++		pinctrl_poweroff: poweroffgrp {
++			fsl,pins = <
++				MX51_PAD_CSI2_VSYNC__GPIO4_13		0x85
++			>;
++		};
++
++		pinctrl_reset: resetgrp {
++			fsl,pins = <
++				MX51_PAD_DI1_PIN13__GPIO3_2		0x85
++			>;
++		};
++
++		pinctrl_uart1: uart1grp {
++			fsl,pins = <
++				MX51_PAD_UART1_RXD__UART1_RXD		0x1c5
++				MX51_PAD_UART1_TXD__UART1_TXD		0x1c5
++				MX51_PAD_UART1_RTS__UART1_RTS		0x1c5
++				MX51_PAD_UART1_CTS__UART1_CTS		0x1c5
++			>;
++		};
++
++		pinctrl_usbh1: usbh1grp {
++			fsl,pins = <
++				MX51_PAD_USBH1_DATA0__USBH1_DATA0	0x1e5
++				MX51_PAD_USBH1_DATA1__USBH1_DATA1	0x1e5
++				MX51_PAD_USBH1_DATA2__USBH1_DATA2	0x1e5
++				MX51_PAD_USBH1_DATA3__USBH1_DATA3	0x1e5
++				MX51_PAD_USBH1_DATA4__USBH1_DATA4	0x1e5
++				MX51_PAD_USBH1_DATA5__USBH1_DATA5	0x1e5
++				MX51_PAD_USBH1_DATA6__USBH1_DATA6	0x1e5
++				MX51_PAD_USBH1_DATA7__USBH1_DATA7	0x1e5
++				MX51_PAD_USBH1_CLK__USBH1_CLK		0x1e5
++				MX51_PAD_USBH1_DIR__USBH1_DIR		0x1e5
++				MX51_PAD_USBH1_NXT__USBH1_NXT		0x1e5
++				MX51_PAD_USBH1_STP__USBH1_STP		0x1e5
++			>;
++		};
++
++		pinctrl_usbh1reg: usbh1reggrp {
++			fsl,pins = <
++				MX51_PAD_EIM_D27__GPIO2_9	0x80000000 /* 0x85 */	/* USB phy reset, 0 = reset */
++			>;
++		};
++		pinctrl_vga_en: vgaengrp {
++			fsl,pins = <
++				MX51_PAD_DISPB2_SER_CLK__GPIO3_7	0x80000000	/* vga en - active low */
++			>;
++		};
++
++		pinctrl_wlan: wlanengrp {
++			fsl,pins = <
++				MX51_PAD_EIM_A16__GPIO2_10	0x80000000 /* 0x85 */	/* WLAN reset */
++				MX51_PAD_EIM_A22__GPIO2_16	0x80000000 /* 0x85 */	/* WLAN power */
++			>;
++		};
++	};
++};
++
++&uart1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_uart1>;
++	status = "okay";
++};
++
++&i2c2 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_i2c2>;
++	clock-frequency = <100000>;
++	status = "okay";
++
++	sgtl5000: codec@a {
++		compatible = "fsl,sgtl5000";
++		reg = <0x0a>;
++		VDDA-supply = <&vdig_reg>;
++		VDDIO-supply = <&vvideo_reg>;
++		VDDD-supply = <&vgen1_reg>;
++		clocks = <&clk_sgtl5000>;
++	};
++
++	sii9022: hdmi-bridge@39 {
++		compatible = "sil,sii9022";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_hdmi>;
++		reg = <0x39>;
++#if 0
++		From old sources...
++		cvcc12-supply = <&vgen1_reg>;
++		iovcc-supply = <&vgen3_reg>;
++#endif
++#if 0
++		/* doesnt work and leads to i2c bus unavailable */
++		interrupt-parent = <&gpio3>;
++		interrupts = <6 IRQ_TYPE_LEVEL_LOW>;
++#endif
++		reset-gpios = <&gpio3 5 GPIO_ACTIVE_HIGH>;
++
++		ports {
++			#address-cells = <1>;
++			#size-cells = <0>;
++
++			port@0 {
++				reg = <0>;
++				bridge_in: endpoint {
++					remote-endpoint = <&display1_out>;
++				};
++			};
++
++			port@1 {
++				reg = <1>;
++				bridge_out: endpoint {
++					remote-endpoint = <&hdmi_connector_in>;
++				};
++			};
++		};
++	};
++};
++
++&esdhc1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_esdhc1>;
++	vmmc-supply = <&vsd_reg>;
++#if 0
++	/* FIX ME */
++	/* gpio2 7 ? */
++	cd-gpios = <&gpio1 0 GPIO_ACTIVE_HIGH>;
++	wp-gpios = <&gpio1 1 GPIO_ACTIVE_HIGH>;
++#endif
++	status = "okay";
++};
++
++&esdhc2 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_esdhc2>;
++	vmmc-supply = <&vsd_reg>;
++	status = "okay";
++#if 0
++disabled since it's working without that. Check when work will be done on uboot side
++	cd-gpios = <&gpio1 8 GPIO_ACTIVE_HIGH>;
++	wp-gpios = <&gpio1 7 GPIO_ACTIVE_HIGH>;
++#endif
++};
++
++&ecspi1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_ecspi1>;
++	cs-gpios = <&gpio4 24 GPIO_ACTIVE_HIGH>, <&gpio4 25 GPIO_ACTIVE_LOW>;
++	status = "okay";
++
++	pmic: mc13892@0 {
++		compatible = "fsl,mc13892";
++		spi-max-frequency = <20000000>;
++		reg = <0>;
++		interrupt-parent = <&gpio1>;
++		interrupts = <6 0x4>;
++		fsl,mc13xxx-uses-rtc;
++		fsl,mc13xxx-reboot;
++		spi-cs-high;
++
++		regulators {
++			sw1_reg: sw1 {
++				regulator-min-microvolt = <600000>;
++				regulator-max-microvolt = <1375000>;
++				regulator-boot-on;
++				regulator-always-on;
++			};
++
++			sw2_reg: sw2 {
++				regulator-min-microvolt = <900000>;
++				regulator-max-microvolt = <1850000>;
++				regulator-boot-on;
++				regulator-always-on;
++			};
++
++			sw3_reg: sw3 {
++				regulator-min-microvolt = <1100000>;
++				regulator-max-microvolt = <1850000>;
++				regulator-boot-on;
++				regulator-always-on;
++			};
++
++			sw4_reg: sw4 {
++				regulator-min-microvolt = <1100000>;
++				regulator-max-microvolt = <1850000>;
++				regulator-boot-on;
++				regulator-always-on;
++			};
++
++			vpll_reg: vpll {
++				regulator-min-microvolt = <1050000>;
++				regulator-max-microvolt = <1800000>;
++				regulator-boot-on;
++				regulator-always-on;
++			};
++
++			vdig_reg: vdig {
++				regulator-min-microvolt = <1650000>;
++				regulator-max-microvolt = <1650000>;
++			};
++
++			vsd_reg: vsd {
++				regulator-min-microvolt = <3150000>;
++				regulator-max-microvolt = <3150000>;
++			};
++
++			vusb_reg: vusb {
++				regulator-always-on;
++			};
++			vusb2_reg: vusb2 {
++				regulator-min-microvolt = <2400000>;
++				regulator-max-microvolt = <2775000>;
++				regulator-boot-on;
++				regulator-always-on;
++			};
++
++			vvideo_reg: vvideo {
++				regulator-min-microvolt = <2775000>;
++				regulator-max-microvolt = <2775000>;
++			};
++
++			vaudio_reg: vaudio {
++				regulator-min-microvolt = <2300000>;
++				regulator-max-microvolt = <3000000>;
++			};
++
++			vcam_reg: vcam {
++				regulator-min-microvolt = <2500000>;
++				regulator-max-microvolt = <3000000>;
++			};
++
++			vgen1_reg: vgen1 {
++				regulator-min-microvolt = <1200000>;
++				regulator-max-microvolt = <3150000>;
++			};
++
++			vgen2_reg: vgen2 {
++				regulator-min-microvolt = <3150000>;
++				regulator-max-microvolt = <3150000>;
++				regulator-always-on;
++			};
++
++			vgen3_reg: vgen3 {
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <2900000>;
++				regulator-always-on;
++			};
++		};
++	};
++
++	flash: m25p80@1 {
++		#address-cells = <1>;
++		#size-cells = <1>;
++		compatible = "sst,sst25vf032b", "m25p80";
++		spi-max-frequency = <25000000>;
++		reg = <1>;
++		partition@0 {
++			label = "firmware";
++			reg = <0x0 0x200000>;
++		};
++		partition@200000 {
++			label = "user";
++			reg = <0x200000 0x200000>;
++		};
++	};
++};
++
++&audmux {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_audmux>;
++	status = "okay";
++};
++
++&gpu {
++	status = "okay";
++};
++
++&ipu_di0_disp1 {
++		remote-endpoint = <&display1_in>;
++};
++
++&pata {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_pata>;
++	status = "okay";
++};
++
++&usbotg {
++	phy_type = "utmi_wide";
++	disable-over-current;
++	dr_mode = "host";
++	status = "okay";
++};
++
++&usbh1 {
++	phy_type = "ulpi";
++	status = "okay";
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_usbh1>;
++	vbus-supply = <&reg_hub_reset>;
++	disable-over-current;
++	phy-names = "usb-phy", "ulpi-phy";
++	phys = <&usbphy1>, <&ulpiphy1>;
++	ulpi {
++		ulpiphy1: phy {
++			compatible = "smsc,usb331x";
++			#phy-cells = <0>;
++		};
++	};
++};
++
++&sahara {
++	status = "okay";
++};
+Index: linux/arch/arm/boot/dts/imx51.dtsi
+===================================================================
+--- linux.orig/arch/arm/boot/dts/imx51.dtsi
++++ linux/arch/arm/boot/dts/imx51.dtsi
+@@ -279,7 +279,7 @@
+ 				compatible = "fsl,imx51-usb", "fsl,imx27-usb";
+ 				reg = <0x73f80000 0x0200>;
+ 				interrupts = <18>;
+-				clocks = <&clks IMX5_CLK_USBOH3_GATE>;
++				clocks = <&clks IMX5_CLK_USBOH3_GATE>, <&clks IMX5_CLK_USBOH3_PER_GATE>, <&clks IMX5_CLK_DUMMY>;
+ 				fsl,usbmisc = <&usbmisc 0>;
+ 				fsl,usbphy = <&usbphy0>;
+ 				status = "disabled";
+@@ -289,7 +289,8 @@
+ 				compatible = "fsl,imx51-usb", "fsl,imx27-usb";
+ 				reg = <0x73f80200 0x0200>;
+ 				interrupts = <14>;
+-				clocks = <&clks IMX5_CLK_USBOH3_GATE>;
++				clock-names = "ahb", "per", "ipg";
++				clocks = <&clks IMX5_CLK_USBOH3_GATE>, <&clks IMX5_CLK_USBOH3_PER_GATE>, <&clks IMX5_CLK_DUMMY>;
+ 				fsl,usbmisc = <&usbmisc 1>;
+ 				dr_mode = "host";
+ 				status = "disabled";
+@@ -299,7 +300,8 @@
+ 				compatible = "fsl,imx51-usb", "fsl,imx27-usb";
+ 				reg = <0x73f80400 0x0200>;
+ 				interrupts = <16>;
+-				clocks = <&clks IMX5_CLK_USBOH3_GATE>;
++				clock-names = "ahb", "per", "ipg";
++				clocks = <&clks IMX5_CLK_USBOH3_GATE>, <&clks IMX5_CLK_USBOH3_PER_GATE>, <&clks IMX5_CLK_DUMMY>;
+ 				fsl,usbmisc = <&usbmisc 2>;
+ 				dr_mode = "host";
+ 				status = "disabled";
+@@ -309,7 +311,8 @@
+ 				compatible = "fsl,imx51-usb", "fsl,imx27-usb";
+ 				reg = <0x73f80600 0x0200>;
+ 				interrupts = <17>;
+-				clocks = <&clks IMX5_CLK_USBOH3_GATE>;
++				clock-names = "ahb", "per", "ipg";
++				clocks = <&clks IMX5_CLK_USBOH3_GATE>, <&clks IMX5_CLK_USBOH3_PER_GATE>, <&clks IMX5_CLK_DUMMY>;
+ 				fsl,usbmisc = <&usbmisc 3>;
+ 				dr_mode = "host";
+ 				status = "disabled";
+Index: linux/drivers/phy/Kconfig
+===================================================================
+--- linux.orig/drivers/phy/Kconfig
++++ linux/drivers/phy/Kconfig
+@@ -24,6 +24,14 @@ config GENERIC_PHY_MIPI_DPHY
+ 	  Provides a number of helpers a core functions for MIPI D-PHY
+ 	  drivers to us.
+ 
++config PHY_SMSC
++	tristate "SMSC phy support"
++	depends on OF
++	depends on USB_ULPI_BUS
++	select GENERIC_PHY
++	help
++	  Enable this to support SMSC Phys.
++
+ config PHY_LPC18XX_USB_OTG
+ 	tristate "NXP LPC18xx/43xx SoC USB OTG PHY driver"
+ 	depends on OF && (ARCH_LPC18XX || COMPILE_TEST)
+Index: linux/drivers/phy/Makefile
+===================================================================
+--- linux.orig/drivers/phy/Makefile
++++ linux/drivers/phy/Makefile
+@@ -4,6 +4,7 @@
+ #
+ 
+ obj-$(CONFIG_GENERIC_PHY)		+= phy-core.o
++obj-$(CONFIG_PHY_SMSC)			+= phy-smsc.o
+ obj-$(CONFIG_GENERIC_PHY_MIPI_DPHY)	+= phy-core-mipi-dphy.o
+ obj-$(CONFIG_PHY_CAN_TRANSCEIVER)	+= phy-can-transceiver.o
+ obj-$(CONFIG_PHY_LPC18XX_USB_OTG)	+= phy-lpc18xx-usb-otg.o
+Index: linux/drivers/phy/phy-smsc.c
+===================================================================
+--- /dev/null
++++ linux/drivers/phy/phy-smsc.c
+@@ -0,0 +1,222 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * phy-smsc.c - SMSC USB ULPI PHY driver
++ *
++ * Copyright (C) 2022 Arnaud Patard <apatard@hupstream.com>
++ *
++ */
++#include <linux/module.h>
++#include <linux/bitfield.h>
++#include <linux/delay.h>
++#include <linux/ulpi/driver.h>
++#include <linux/ulpi/regs.h>
++#include <linux/gpio/consumer.h>
++#include <linux/phy/ulpi_phy.h>
++#include <linux/power_supply.h>
++#include <linux/workqueue.h>
++
++#define SMSC_VENDOR_ID 0x0424
++
++#if 0
++static const struct ulpi_device_id smsc_ulpi_id[] = {
++	{ SMSC_VENDOR_ID, 0x0006, },  /* USB331x */
++	{ SMSC_VENDOR_ID, 0x0007, },  /* USB3320 */
++	{ SMSC_VENDOR_ID, 0x0008, },  /* USB334x */
++	{ },
++};
++MODULE_DEVICE_TABLE(ulpi, smsc_ulpi_id);
++#endif
++
++struct smsc {
++	struct ulpi *ulpi;
++	struct phy *phy;
++	/* the phy pin is actually a resetb so input should be low to reset */
++	struct gpio_desc *gpio_reset;
++};
++
++static int smsc_ulpi_write(struct smsc *data, u8 reg, u8 val)
++{
++	int ret;
++
++	ret = ulpi_write(data->ulpi, reg, val);
++	if (ret)
++		dev_err(&data->ulpi->dev, "error %d writing val 0x%02x to reg 0x%02x\n",
++			ret, val, reg);
++
++	return ret;
++}
++
++static int smsc_ulpi_read(struct smsc *data, u8 reg, u8 *val)
++{
++	int ret;
++
++	ret = ulpi_read(data->ulpi, reg);
++	if (ret >= 0) {
++		*val = ret;
++		ret = 0;
++	} else {
++		dev_err(&data->ulpi->dev, "error %d reading reg 0x%02x\n", ret, reg);
++	}
++
++	return ret;
++}
++
++static int smsc_set_vbus(struct smsc *data, bool enable)
++{
++        int ret;
++	u8 value;
++
++	ret = smsc_ulpi_read(data, ULPI_OTG_CTRL, &value);
++	if (ret < 0)
++		return ret;
++
++	value &= ~(ULPI_OTG_CTRL_DRVVBUS | ULPI_OTG_CTRL_DRVVBUS_EXT | ULPI_OTG_CTRL_CHRGVBUS);
++	if (enable) {
++		/* FIXME: make it a device-tree prop */
++		value |= ULPI_OTG_CTRL_DRVVBUS;
++		value |= ULPI_OTG_CTRL_DRVVBUS_EXT;
++		value |= ULPI_OTG_CTRL_CHRGVBUS;
++	}
++
++	return smsc_ulpi_write(data, ULPI_OTG_CTRL, value);
++}
++
++static int smsc_power_on(struct phy *phy)
++{
++	struct smsc *data = phy_get_drvdata(phy);
++
++	return smsc_set_vbus(data, true);
++}
++
++static int smsc_power_off(struct phy *phy)
++{
++	struct smsc *data = phy_get_drvdata(phy);
++
++	return smsc_set_vbus(data, false);
++}
++
++static int smsc_reset(struct phy *phy)
++{
++	struct smsc *data = phy_get_drvdata(phy);
++
++	gpiod_set_value_cansleep(data->gpio_reset, 0);
++	usleep_range(200, 500);
++	gpiod_set_value_cansleep(data->gpio_reset, 1);
++
++	return 0;
++}
++
++static int smsc_set_mode(struct phy *phy, enum phy_mode mode, int submode)
++{
++	struct smsc *data = phy_get_drvdata(phy);
++	int ret;
++	u8 reg;
++
++	ret = smsc_ulpi_read(data, ULPI_OTG_CTRL, &reg);
++	if (ret < 0)
++		return ret;
++
++	switch (mode) {
++	case PHY_MODE_USB_HOST:
++		reg |= (ULPI_OTG_CTRL_EXTVBUSIND
++			| ULPI_OTG_CTRL_DP_PULLDOWN
++			| ULPI_OTG_CTRL_DM_PULLDOWN);
++		break;
++	case PHY_MODE_USB_DEVICE:
++		reg &= ~(ULPI_OTG_CTRL_EXTVBUSIND
++			 |ULPI_OTG_CTRL_DP_PULLDOWN
++			 | ULPI_OTG_CTRL_DM_PULLDOWN);
++		break;
++	default:
++		/* nothing */
++		return 0;
++	}
++
++	return smsc_ulpi_write(data, ULPI_OTG_CTRL, reg);
++}
++
++static int smsc_init(struct phy *phy)
++{
++	return smsc_reset(phy);
++}
++
++static int smsc_exit(struct phy *phy)
++{
++	struct smsc *data = phy_get_drvdata(phy);
++
++	if (data)
++		gpiod_set_value_cansleep(data->gpio_reset, 0);
++
++	return 0;
++}
++
++static const struct phy_ops phy_ops = {
++	.init = smsc_init,
++	.exit = smsc_exit,
++	.power_on  = smsc_power_on,
++	.power_off = smsc_power_off,
++	.reset = smsc_reset,
++	.set_mode = smsc_set_mode,
++	.owner = THIS_MODULE,
++};
++
++static int smsc_probe(struct ulpi *ulpi)
++{
++	struct smsc *data;
++	struct phy_provider *phy_provider;
++
++	data = devm_kzalloc(&ulpi->dev, sizeof(*data), GFP_KERNEL);
++	if (!data)
++		return -ENOMEM;
++
++	data->ulpi = ulpi;
++
++	data->gpio_reset = devm_gpiod_get_optional(&ulpi->dev, "reset",
++						   GPIOD_OUT_LOW);
++	if (IS_ERR(data->gpio_reset))
++		return PTR_ERR(data->gpio_reset);
++
++	gpiod_set_value_cansleep(data->gpio_reset, 1);
++
++	/* FIXME: handle clocks */
++
++	data->phy = devm_phy_create(&ulpi->dev, ulpi->dev.of_node,
++					&phy_ops);
++	if (IS_ERR(data->phy))
++		return PTR_ERR(data->phy);
++
++	phy_set_drvdata(data->phy, data);
++	ulpi_set_drvdata(ulpi, data);
++
++	phy_provider = devm_of_phy_provider_register(&ulpi->dev, of_phy_simple_xlate);
++	if (IS_ERR(phy_provider))
++		return PTR_ERR(phy_provider);
++
++	return 0;
++}
++
++static const struct of_device_id smsc_phy_match[] = {
++        { .compatible = "smsc,usb331x", },
++        { .compatible = "smsc,usb3320", },
++        { .compatible = "smsc,usb334x", },
++        { }
++};
++MODULE_DEVICE_TABLE(of, smsc_phy_match);
++
++static struct ulpi_driver smsc_driver = {
++#if 0
++	.id_table = smsc_ulpi_id,
++#endif
++	.probe = smsc_probe,
++	.driver = {
++		.name = "smsc",
++		.of_match_table = smsc_phy_match,
++		.owner = THIS_MODULE,
++	},
++};
++
++module_ulpi_driver(smsc_driver);
++
++MODULE_AUTHOR("Arnaud Patard");
++MODULE_LICENSE("GPL v2");
++MODULE_DESCRIPTION("smsc ULPI PHY driver");
+Index: linux/net/rfkill/rfkill-gpio.c
+===================================================================
+--- linux.orig/net/rfkill/rfkill-gpio.c
++++ linux/net/rfkill/rfkill-gpio.c
+@@ -13,6 +13,7 @@
+ #include <linux/slab.h>
+ #include <linux/acpi.h>
+ #include <linux/gpio/consumer.h>
++#include <linux/of.h>
+ 
+ struct rfkill_gpio_data {
+ 	const char		*name;
+@@ -157,12 +158,18 @@ static const struct acpi_device_id rfkil
+ MODULE_DEVICE_TABLE(acpi, rfkill_acpi_match);
+ #endif
+ 
++static const struct of_device_id rfkill_gpio_dt_ids[] = {
++	{ .compatible = "rfkill-gpio", },
++	{},
++};
++
+ static struct platform_driver rfkill_gpio_driver = {
+ 	.probe = rfkill_gpio_probe,
+ 	.remove = rfkill_gpio_remove,
+ 	.driver = {
+ 		.name = "rfkill_gpio",
+ 		.acpi_match_table = ACPI_PTR(rfkill_acpi_match),
++		.of_match_table = rfkill_gpio_dt_ids,
+ 	},
+ };
+ 
+Index: linux/drivers/gpu/drm/imx/ipuv3-crtc.c
+===================================================================
+--- linux.orig/drivers/gpu/drm/imx/ipuv3-crtc.c
++++ linux/drivers/gpu/drm/imx/ipuv3-crtc.c
+@@ -40,6 +40,7 @@ struct ipu_crtc {
+ 	struct ipu_di		*di;
+ 	int			irq;
+ 	struct drm_pending_vblank_event *event;
++	int			max_clock;
+ };
+ 
+ static inline struct ipu_crtc *to_ipu_crtc(struct drm_crtc *crtc)
+@@ -321,9 +322,20 @@ static void ipu_crtc_mode_set_nofb(struc
+ 	ipu_di_init_sync_panel(ipu_crtc->di, &sig_cfg);
+ }
+ 
++static enum drm_mode_status ipu_crtc_mode_valid(struct drm_crtc *crtc,
++							const struct drm_display_mode *mode)
++{
++	struct ipu_crtc *ipu_crtc = to_ipu_crtc(crtc);
++        if (ipu_crtc->max_clock && mode->clock > ipu_crtc->max_clock)
++                return MODE_CLOCK_HIGH;
++        return MODE_OK;
++}
++
++
+ static const struct drm_crtc_helper_funcs ipu_helper_funcs = {
+ 	.mode_fixup = ipu_crtc_mode_fixup,
+ 	.mode_set_nofb = ipu_crtc_mode_set_nofb,
++	.mode_valid = ipu_crtc_mode_valid,
+ 	.atomic_check = ipu_crtc_atomic_check,
+ 	.atomic_begin = ipu_crtc_atomic_begin,
+ 	.atomic_flush = ipu_crtc_atomic_flush,
+@@ -388,6 +400,7 @@ static int ipu_drm_bind(struct device *d
+ 
+ 	ipu_crtc->dev = dev;
+ 	ipu_crtc->plane[0] = primary_plane;
++	ipu_crtc->max_clock = pdata->max_clock;
+ 
+ 	crtc = &ipu_crtc->base;
+ 	crtc->port = pdata->of_node;
+Index: linux/drivers/gpu/ipu-v3/ipu-common.c
+===================================================================
+--- linux.orig/drivers/gpu/ipu-v3/ipu-common.c
++++ linux/drivers/gpu/ipu-v3/ipu-common.c
+@@ -1171,6 +1171,13 @@ static int ipu_add_client_devices(struct
+ 		pdev->dev.parent = dev;
+ 
+ 		reg->pdata.of_node = of_node;
++		reg->pdata.max_clock = 0;
++		/*
++		 * https://patchwork.kernel.org/project/linux-arm-kernel/patch/20131030190123.GM16735@n2100.arm.linux.org.uk/
++		 * states that max mode clock is 133MHz
++		 */
++		if (of_device_is_compatible(ipu->dev->of_node, "fsl,imx51-ipu"))
++			reg->pdata.max_clock = 133000; /* kHz */
+ 		ret = platform_device_add_data(pdev, &reg->pdata,
+ 					       sizeof(reg->pdata));
+ 		if (!ret)
+Index: linux/drivers/usb/chipidea/ci.h
+===================================================================
+--- linux.orig/drivers/usb/chipidea/ci.h
++++ linux/drivers/usb/chipidea/ci.h
+@@ -245,6 +245,7 @@ struct ci_hdrc {
+ 	struct ulpi			*ulpi;
+ 	struct ulpi_ops 		ulpi_ops;
+ 	struct phy			*phy;
++	struct phy			*ulpi_phy;
+ 	/* old usb_phy interface */
+ 	struct usb_phy			*usb_phy;
+ 	struct usb_hcd			*hcd;
+Index: linux/drivers/usb/chipidea/core.c
+===================================================================
+--- linux.orig/drivers/usb/chipidea/core.c
++++ linux/drivers/usb/chipidea/core.c
+@@ -407,6 +407,8 @@ void ci_platform_configure(struct ci_hdr
+ 
+ 	if (is_device_mode) {
+ 		phy_set_mode(ci->phy, PHY_MODE_USB_DEVICE);
++		if (ci->ulpi_phy)
++			phy_set_mode(ci->ulpi_phy, PHY_MODE_USB_DEVICE);
+ 
+ 		if (ci->platdata->flags & CI_HDRC_DISABLE_DEVICE_STREAMING)
+ 			hw_write(ci, OP_USBMODE, USBMODE_CI_SDIS,
+@@ -415,6 +417,8 @@ void ci_platform_configure(struct ci_hdr
+ 
+ 	if (is_host_mode) {
+ 		phy_set_mode(ci->phy, PHY_MODE_USB_HOST);
++		if (ci->ulpi_phy)
++			phy_set_mode(ci->ulpi_phy, PHY_MODE_USB_HOST);
+ 
+ 		if (ci->platdata->flags & CI_HDRC_DISABLE_HOST_STREAMING)
+ 			hw_write(ci, OP_USBMODE, USBMODE_CI_SDIS,
+@@ -1093,6 +1097,20 @@ static int ci_hdrc_probe(struct platform
+ 		return ret;
+ 	}
+ 
++	if (ci->ulpi) {
++		ci->ulpi_phy = devm_phy_get(dev->parent, "ulpi-phy");
++		if (IS_ERR(ci->ulpi_phy)) {
++			dev_info(dev, "plop %ld\n", PTR_ERR(ci->ulpi_phy));
++			ci->ulpi_phy = NULL;
++		} else {
++	                ret = phy_init(ci->ulpi_phy);
++			if (ret) {
++				ci->ulpi_phy = NULL;
++				goto deinit_phy;
++			}
++		}
++	}
++
+ 	ci->hw_bank.phys = res->start;
+ 
+ 	ci->irq = platform_get_irq(pdev, 0);
+@@ -1220,6 +1238,8 @@ deinit_gadget:
+ deinit_host:
+ 	ci_hdrc_host_destroy(ci);
+ deinit_phy:
++	if (ci->ulpi_phy)
++		phy_exit(ci->ulpi_phy);
+ 	ci_usb_phy_exit(ci);
+ ulpi_exit:
+ 	ci_ulpi_exit(ci);
+@@ -1243,6 +1263,10 @@ static int ci_hdrc_remove(struct platfor
+ 	dbg_remove_files(ci);
+ 	ci_role_destroy(ci);
+ 	ci_hdrc_enter_lpm(ci, true);
++	if (ci->ulpi_phy) {
++		phy_power_off(ci->ulpi_phy);
++		phy_exit(ci->ulpi_phy);
++	}
+ 	ci_usb_phy_exit(ci);
+ 	ci_ulpi_exit(ci);
+ 
+Index: linux/drivers/usb/chipidea/host.c
+===================================================================
+--- linux.orig/drivers/usb/chipidea/host.c
++++ linux/drivers/usb/chipidea/host.c
+@@ -44,6 +44,13 @@ static int ehci_ci_portpower(struct usb_
+ 	int ret = 0;
+ 	int port = HCS_N_PORTS(ehci->hcs_params);
+ 
++	if (ci->ulpi_phy) {
++		if (enable)
++			phy_power_on(ci->ulpi_phy);
++		else
++			phy_power_off(ci->ulpi_phy);
++	}
++
+ 	if (priv->reg_vbus && enable != priv->enabled) {
+ 		if (port > 1) {
+ 			dev_warn(dev,
+Index: linux/drivers/usb/phy/Kconfig
+===================================================================
+--- linux.orig/drivers/usb/phy/Kconfig
++++ linux/drivers/usb/phy/Kconfig
+@@ -178,6 +178,15 @@ config USB_ULPI
+ 	  Enable this to support ULPI connected USB OTG transceivers which
+ 	  are likely found on embedded boards.
+ 
++config USB_ULPI_PHY
++	tristate "ULPI Phy Driver"
++        depends on BROKEN && (ARM || ARM64 || COMPILE_TEST)
++        select USB_PHY
++	select USB_ULPI
++	help
++	  Enable this to support ULPI connected USB OTG transceivers which
++	  are likely found on embedded boards.
++
+ config USB_ULPI_VIEWPORT
+ 	bool
+ 	help
+Index: linux/drivers/usb/phy/Makefile
+===================================================================
+--- linux.orig/drivers/usb/phy/Makefile
++++ linux/drivers/usb/phy/Makefile
+@@ -22,6 +22,7 @@ obj-$(CONFIG_USB_ISP1301)		+= phy-isp130
+ obj-$(CONFIG_USB_MV_OTG)		+= phy-mv-usb.o
+ obj-$(CONFIG_USB_MXS_PHY)		+= phy-mxs-usb.o
+ obj-$(CONFIG_USB_ULPI)			+= phy-ulpi.o
++obj-$(CONFIG_USB_ULPI_PHY)		+= phy-ulpi-usb.o
+ obj-$(CONFIG_USB_ULPI_VIEWPORT)		+= phy-ulpi-viewport.o
+ obj-$(CONFIG_KEYSTONE_USB_PHY)		+= phy-keystone.o
+ obj-$(CONFIG_JZ4770_PHY)		+= phy-jz4770.o
+Index: linux/drivers/usb/phy/phy-ulpi-usb.c
+===================================================================
+--- /dev/null
++++ linux/drivers/usb/phy/phy-ulpi-usb.c
+@@ -0,0 +1,164 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * phy-smsc.c - SMSC USB ULPI PHY driver
++ *
++ * Copyright (C) 2022 Arnaud Patard <apatard@hupstream.com>
++ *
++ */
++#include <linux/module.h>
++#include <linux/bitfield.h>
++#include <linux/delay.h>
++#include <linux/ulpi/driver.h>
++#include <linux/ulpi/regs.h>
++#include <linux/gpio/consumer.h>
++#include <linux/phy/ulpi_phy.h>
++#include <linux/usb/phy.h>
++#include <linux/usb/of.h>
++#include <linux/usb/ulpi.h>
++#include <linux/workqueue.h>
++
++#define ulpi_phy_VENDOR_ID 0x0424
++
++struct ulpi_usb_phy {
++	struct ulpi *ulpi;
++	struct usb_phy *phy;
++	struct usb_phy u_phy;
++	struct gpio_desc *gpio_reset;
++};
++
++static inline struct ulpi_usb_phy *to_ulpi_usb_phy(struct usb_phy *u_phy)
++{
++	return container_of(u_phy, struct ulpi_usb_phy, u_phy);
++}
++
++
++static int ulpi_phy_ulpi_write(struct usb_phy *phy, u32 val, u32 reg)
++{
++	struct ulpi_usb_phy *data = to_ulpi_usb_phy(phy);
++	int ret;
++
++	ret = ulpi_write(data->ulpi, reg&0xff, val&0xff);
++	if (ret)
++		dev_err(&data->ulpi->dev, "error %d writing val 0x%02x to reg 0x%02x\n",
++			ret, val, reg);
++
++	return ret;
++}
++
++static int ulpi_phy_ulpi_read(struct usb_phy *phy, u32 reg)
++{
++	struct ulpi_usb_phy *data = to_ulpi_usb_phy(phy);
++	int ret;
++	u8 val = 0xff;
++
++	ret = ulpi_read(data->ulpi, reg&0xff);
++	if (ret >= 0) {
++		val = ret;
++	} else {
++		dev_err(&data->ulpi->dev, "error %d reading reg 0x%02x\n", ret, reg);
++	}
++
++	return val;
++}
++
++struct usb_phy_io_ops ulpi_phy_access_ops = {
++	.read   = ulpi_phy_ulpi_read,
++	.write  = ulpi_phy_ulpi_write,
++};
++
++static int ulpi_phy_reset(struct usb_phy *phy)
++{
++	struct ulpi_usb_phy *data = to_ulpi_usb_phy(phy);
++
++	dev_info(&data->ulpi->dev, "%s\n", __func__);
++
++	gpiod_set_value_cansleep(data->gpio_reset, 1);
++	usleep_range(200, 500);
++	gpiod_set_value_cansleep(data->gpio_reset, 0);
++
++	return 0;
++}
++
++
++static int ulpi_phy_init(struct usb_phy *phy)
++{
++	struct ulpi_usb_phy *data = to_ulpi_usb_phy(phy);
++
++	dev_info(&data->ulpi->dev, "%s\n", __func__);
++	return ulpi_phy_reset(phy);
++}
++
++static void ulpi_phy_exit(struct usb_phy *phy)
++{
++	struct ulpi_usb_phy *data = to_ulpi_usb_phy(phy);
++
++	dev_info(&data->ulpi->dev, "%s\n", __func__);
++	gpiod_set_value_cansleep(data->gpio_reset, 1);
++}
++
++static int ulpi_phy_probe(struct ulpi *ulpi)
++{
++	struct device_node *np = ulpi->dev.of_node;
++	struct ulpi_usb_phy *data;
++	struct usb_phy *phy;
++	enum usb_phy_interface phy_type;
++
++	data = devm_kzalloc(&ulpi->dev, sizeof(*data), GFP_KERNEL);
++	if (!data)
++		return -ENOMEM;
++
++	data->ulpi = ulpi;
++
++	phy_type = of_usb_get_phy_mode(np);
++	if (phy_type != USBPHY_INTERFACE_MODE_ULPI)
++		return -EINVAL;
++
++	data->gpio_reset = devm_gpiod_get_optional(&ulpi->dev, "reset",
++						   GPIOD_OUT_LOW);
++	if (IS_ERR(data->gpio_reset))
++		return PTR_ERR(data->gpio_reset);
++
++	gpiod_set_value_cansleep(data->gpio_reset, 1);
++
++	phy = devm_otg_ulpi_create(&ulpi->dev,
++				   &ulpi_phy_access_ops, 0);
++	if (!phy) {
++		dev_err(&ulpi->dev, "Failed to create ULPI OTG\n");
++		return -ENOMEM;
++	}
++
++	data->phy = phy;
++
++	ulpi_set_drvdata(ulpi, data);
++
++	data->u_phy.dev = &ulpi->dev;
++	data->u_phy.init = ulpi_phy_init;
++	data->u_phy.shutdown = ulpi_phy_exit;
++
++
++	return usb_add_phy_dev(&data->u_phy);
++}
++
++
++static const struct of_device_id ulpi_phy_match[] = {
++	{ .compatible = "smsc,usb331x", },
++	{ .compatible = "smsc,usb3320", },
++	{ .compatible = "smsc,usb334x", },
++	{ }
++};
++MODULE_DEVICE_TABLE(of, ulpi_phy_match);
++
++static struct ulpi_driver ulpi_phy_driver = {
++	.probe = ulpi_phy_probe,
++	.driver = {
++		.name = "smsc",
++		.of_match_table = ulpi_phy_match,
++		.owner = THIS_MODULE,
++	},
++};
++
++module_ulpi_driver(ulpi_phy_driver);
++
++MODULE_AUTHOR("Arnaud Patard");
++MODULE_LICENSE("GPL v2");
++MODULE_DESCRIPTION("ULPI PHY driver");
+Index: linux/include/video/imx-ipu-v3.h
+===================================================================
+--- linux.orig/include/video/imx-ipu-v3.h
++++ linux/include/video/imx-ipu-v3.h
+@@ -498,6 +498,7 @@ struct ipu_client_platformdata {
+ 	int dp;
+ 	int dma[2];
+ 	struct device_node *of_node;
++	int max_clock;
+ };
+ 
+ #endif /* __DRM_IPU_H__ */

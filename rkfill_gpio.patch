@@ -1,0 +1,37 @@
+rfkill-gpio: Add device-tree compatible string
+
+Add of compatible table in order to specify rfkill gpio in
+device trees.
+
+Signed-off-by: Arnaud Patard <apatard@hupstream.com>
+Index: linux/net/rfkill/rfkill-gpio.c
+===================================================================
+--- linux.orig/net/rfkill/rfkill-gpio.c
++++ linux/net/rfkill/rfkill-gpio.c
+@@ -13,6 +13,7 @@
+ #include <linux/slab.h>
+ #include <linux/acpi.h>
+ #include <linux/gpio/consumer.h>
++#include <linux/of.h>
+ 
+ struct rfkill_gpio_data {
+ 	const char		*name;
+@@ -157,12 +158,18 @@ static const struct acpi_device_id rfkil
+ MODULE_DEVICE_TABLE(acpi, rfkill_acpi_match);
+ #endif
+ 
++static const struct of_device_id rfkill_gpio_dt_ids[] = {
++	{ .compatible = "rfkill-gpio", },
++	{},
++};
++
+ static struct platform_driver rfkill_gpio_driver = {
+ 	.probe = rfkill_gpio_probe,
+ 	.remove = rfkill_gpio_remove,
+ 	.driver = {
+ 		.name = "rfkill_gpio",
+ 		.acpi_match_table = ACPI_PTR(rfkill_acpi_match),
++		.of_match_table = rfkill_gpio_dt_ids,
+ 	},
+ };
+ 

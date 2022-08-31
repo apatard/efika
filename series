@@ -1,0 +1,7 @@
+ipu_max_clock.patch
+rkfill_gpio.patch
+imx51_usb_clocks.patch
+smsc.patch
+ci_ulpi_hack.patch
+to2.patch
+add_defconfig.patch

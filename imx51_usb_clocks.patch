@@ -1,0 +1,51 @@
+imx51: provide all clocks to USB.
+
+If I understood correctly, there are 2 clocks to the usb ip so
+ensure they're enabled.
+
+TODO: check if it's really needed.
+
+Signed-off-by: Arnaud Patard <apatard@hupstream.com>
+Index: linux/arch/arm/boot/dts/imx51.dtsi
+===================================================================
+--- linux.orig/arch/arm/boot/dts/imx51.dtsi
++++ linux/arch/arm/boot/dts/imx51.dtsi
+@@ -279,7 +279,7 @@
+ 				compatible = "fsl,imx51-usb", "fsl,imx27-usb";
+ 				reg = <0x73f80000 0x0200>;
+ 				interrupts = <18>;
+-				clocks = <&clks IMX5_CLK_USBOH3_GATE>;
++				clocks = <&clks IMX5_CLK_USBOH3_GATE>, <&clks IMX5_CLK_USBOH3_PER_GATE>, <&clks IMX5_CLK_DUMMY>;
+ 				fsl,usbmisc = <&usbmisc 0>;
+ 				fsl,usbphy = <&usbphy0>;
+ 				status = "disabled";
+@@ -289,7 +289,8 @@
+ 				compatible = "fsl,imx51-usb", "fsl,imx27-usb";
+ 				reg = <0x73f80200 0x0200>;
+ 				interrupts = <14>;
+-				clocks = <&clks IMX5_CLK_USBOH3_GATE>;
++				clock-names = "ahb", "per", "ipg";
++				clocks = <&clks IMX5_CLK_USBOH3_GATE>, <&clks IMX5_CLK_USBOH3_PER_GATE>, <&clks IMX5_CLK_DUMMY>;
+ 				fsl,usbmisc = <&usbmisc 1>;
+ 				dr_mode = "host";
+ 				status = "disabled";
+@@ -299,7 +300,8 @@
+ 				compatible = "fsl,imx51-usb", "fsl,imx27-usb";
+ 				reg = <0x73f80400 0x0200>;
+ 				interrupts = <16>;
+-				clocks = <&clks IMX5_CLK_USBOH3_GATE>;
++				clock-names = "ahb", "per", "ipg";
++				clocks = <&clks IMX5_CLK_USBOH3_GATE>, <&clks IMX5_CLK_USBOH3_PER_GATE>, <&clks IMX5_CLK_DUMMY>;
+ 				fsl,usbmisc = <&usbmisc 2>;
+ 				dr_mode = "host";
+ 				status = "disabled";
+@@ -309,7 +311,8 @@
+ 				compatible = "fsl,imx51-usb", "fsl,imx27-usb";
+ 				reg = <0x73f80600 0x0200>;
+ 				interrupts = <17>;
+-				clocks = <&clks IMX5_CLK_USBOH3_GATE>;
++				clock-names = "ahb", "per", "ipg";
++				clocks = <&clks IMX5_CLK_USBOH3_GATE>, <&clks IMX5_CLK_USBOH3_PER_GATE>, <&clks IMX5_CLK_DUMMY>;
+ 				fsl,usbmisc = <&usbmisc 3>;
+ 				dr_mode = "host";
+ 				status = "disabled";
